@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Life Tracker</title>
+
+<style>
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 500px;
+    margin: auto;
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+#date {
+    text-align: center;
+    color: #777;
+    margin-bottom: 25px;
+}
+
+.activity {
+    width: 100%;
+    padding: 18px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 12px;
+    background: #eee;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.activity:hover {
+    transform: scale(1.02);
+}
+
+.activity.active {
+    background: #4CAF50;
+    color: white;
+}
+
+#score {
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 25px;
+}
+
+#status {
+    text-align: center;
+    margin-top: 10px;
+    color: #777;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Life Tracker</h1>
+
+    <div id="date"></div>
+
+    <button class="activity" id="training" onclick="toggleActivity('training')">
+        🏋️ Træning
+    </button>
+
+    <button class="activity" id="swimming" onclick="toggleActivity('swimming')">
+        🏊 Svømning
+    </button>
+
+    <button class="activity" id="running" onclick="toggleActivity('running')">
+        🏃 Løb
+    </button>
+
+    <button class="activity" id="padel" onclick="toggleActivity('padel')">
+        🎾 Padel
+    </button>
+
+    <button class="activity" id="healthyFood" onclick="toggleActivity('healthyFood')">
+        🥗 Sund mad
+    </button>
+
+    <button class="activity" id="noFap" onclick="toggleActivity('noFap')">
+        ⭐ NoFap
+    </button>
+
+    <div id="score">
+        Dagens score: 0 / 6
+    </div>
+
+    <div id="status">
+        Klar
+    </div>
+
+</div>
+
+
+<script>
+
+// DIN GOOGLE APPS SCRIPT URL
+const API_URL = "https://script.google.com/macros/s/AKfycbxvtqwZbgPyGNqGIbAZrh4GIsYvgptnK8WwmkO6Ss2lROCiM7UHQpFeFX3yar22q4leFQ/exec";
+
+
+let activities = {
+    training: false,
+    swimming: false,
+    running: false,
+    padel: false,
+    healthyFood: false,
+    noFap: false
+};
+
+
+// Lav en stabil dato som fx:
+// 2026-09-14
+function getDateKey() {
+
+    const now = new Date();
+
+    const year = now.getFullYear();
+
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+
+// Vis dato
+function showDate() {
+
+    const now = new Date();
+
+    document.getElementById("date").innerText =
+        now.toLocaleDateString("da-DK", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+        });
+}
+
+
+// Opdater knapper
+function updateUI() {
+
+    for (const activity in activities) {
+
+        const button = document.getElementById(activity);
+
+        if (activities[activity]) {
+            button.classList.add("active");
+        } else {
+            button.classList.remove("active");
+        }
+    }
+
+    updateScore();
+}
+
+
+// Beregn score
+function updateScore() {
+
+    let score = 0;
+
+    for (const activity in activities) {
+
+        if (activities[activity]) {
+            score++;
+        }
+    }
+
+    document.getElementById("score").innerText =
+        `Dagens score: ${score} / 6`;
+}
+
+
+// Når man trykker på en aktivitet
+function toggleActivity(activity) {
+
+    activities[activity] = !activities[activity];
+
+    updateUI();
+
+    saveToGoogleSheets();
+}
+
+
+// Gem i Google Sheets
+function saveToGoogleSheets() {
+
+    document.getElementById("status").innerText = "Gemmer...";
+
+    const data = {
+
+        date: getDateKey(),
+
+        training: activities.training,
+
+        swimming: activities.swimming,
+
+        running: activities.running,
+
+        padel: activities.padel,
+
+        healthyFood: activities.healthyFood,
+
+        noFap: activities.noFap
+    };
+
+
+    fetch(API_URL, {
+
+        method: "POST",
+
+        mode: "no-cors",
+
+        headers: {
+            "Content-Type": "text/plain"
+        },
+
+        body: JSON.stringify(data)
+
+    })
+    .then(() => {
+
+        document.getElementById("status").innerText = "✓ Gemt";
+
+    })
+    .catch(() => {
+
+        document.getElementById("status").innerText =
+            "❌ Kunne ikke gemme";
+
+    });
+}
+
+
+// Hent dagens data fra Google Sheets
+function loadToday() {
+
+    fetch(API_URL)
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        const today = getDateKey();
+
+        for (let i = 1; i < data.length; i++) {
+
+            let rowDate = data[i][0];
+
+            // Sammenlign dato
+            if (String(rowDate).startsWith(today)) {
+
+                activities.training = data[i][1] === true;
+                activities.swimming = data[i][2] === true;
+                activities.running = data[i][3] === true;
+                activities.padel = data[i][4] === true;
+                activities.healthyFood = data[i][5] === true;
+                activities.noFap = data[i][6] === true;
+
+                updateUI();
+
+                document.getElementById("status").innerText =
+                    "✓ Dagens data hentet";
+
+                return;
+            }
+        }
+
+        updateUI();
+
+    })
+
+    .catch(error => {
+
+        console.log(error);
+
+        document.getElementById("status").innerText =
+            "Klar";
+
+    });
+}
+
+
+// Start
+showDate();
+
+loadToday();
+
+</script>
+
+</body>
+</html>
