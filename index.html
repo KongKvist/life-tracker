@@ -269,12 +269,16 @@ function loadToday() {
 
         const today = getDateKey();
 
+        console.log("I dag:", today);
+        console.log("Data fra Google:", data);
+
         for (let i = 1; i < data.length; i++) {
 
-            let rowDate = data[i][0];
+            let rowDate = String(data[i][0]).trim();
 
-            // Sammenlign dato
-            if (String(rowDate).startsWith(today)) {
+            console.log("Finder række:", rowDate);
+
+            if (rowDate === today) {
 
                 activities.training = data[i][1] === true;
                 activities.swimming = data[i][2] === true;
@@ -292,13 +296,23 @@ function loadToday() {
             }
         }
 
+        // Hvis der ikke findes data for i dag
+        activities = {
+            training: false,
+            swimming: false,
+            running: false,
+            padel: false,
+            healthyFood: false,
+            noFap: false
+        };
+
         updateUI();
 
     })
 
     .catch(error => {
 
-        console.log(error);
+        console.log("Fejl:", error);
 
         document.getElementById("status").innerText =
             "Klar";
